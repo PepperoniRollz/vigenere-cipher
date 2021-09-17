@@ -16,7 +16,7 @@
 //=======================================
 const int ALPHABET_LENGTH = 26;
 //Letter frequencies from http://cs.wellesley.edu/~fturbak/codman/letterfreq.html
-const float ALPHABET_FREQ[ALPHABET_LENGTH] = { .082, .015, .028, .043, .127, .022, .02, .061, .07, .002, .008, .04, .024, .067, .075, .019, .001, .06, .063, .091, .028, .001, .024, .002, .02, 0.1 };
+const float ALPHABET_FREQ[ALPHABET_LENGTH] = { .082f, .015f, .028f, .043f, .127f, .022f, .02f, .061f, .07f, .002f, .008f, .04f, .024f, .067f, .075f, .019f, .001f, .06f, .063f, .091f, .028f, .001f, .024f, .002f, .02f, 0.1f };
 //scalar is used to map frequencies (floats) to alphabet in an ordered std::map.  Converted floats to int with scalar.
 const int scalar = 100000;
 
@@ -47,6 +47,7 @@ struct Cipher {
 	std::string ciphertext;
 
 	void encrypt(std::string p_text, std::string keyword) {
+		plaintext = "";
 		plaintext = toUpperCase(p_text);
 		keyword = toUpperCase(keyword);
 		int length = plaintext.length();
@@ -57,6 +58,7 @@ struct Cipher {
 		}
 	}
 	void decrypt(std::string c_text, std::string keyword) {
+		ciphertext = "";
 		ciphertext = toUpperCase(c_text);
 		plaintext = "";
 		int length = ciphertext.length();
@@ -116,6 +118,10 @@ int main() {
 			cipher.decrypt(ciphertext, keyword);
 			break;
 		}
+		//reset for next use
+		ciphertext = "";
+		keyword = "";
+		textFromFile = "";
 		input = getUserInput(0);
 	}
 	return 0;
@@ -127,7 +133,8 @@ int main() {
 
 std::string toUpperCase(std::string text) {
 	std::string formattedText;
-	for (int i = 0; i < text.length(); i++) {
+	int length = text.length();
+	for (int i = 0; i < length; i++) {
 		if (isalpha(text[i])) {
 			formattedText += toupper(text[i]);
 		}
@@ -241,8 +248,9 @@ void outputToFile(std::string text, int selection) {
 //==========================================
 float indexOfCoincidence(std::string ciphertext) {
 	int frequencies[ALPHABET_LENGTH] = { 0 };
-	float  totalCharacters = ciphertext.length();
-	float summation = 0;
+	int  totalCharacters = ciphertext.length();
+	int summation = 0;
+	float index;
 
 	for (int i = 0; i < totalCharacters; i++) {
 		frequencies[ciphertext[i] - 'A']++;
@@ -251,7 +259,7 @@ float indexOfCoincidence(std::string ciphertext) {
 	for (int i = 0; i < ALPHABET_LENGTH; i++) {
 		summation = summation + (frequencies[i] * (frequencies[i] - 1));
 	}
-	float index = summation / (totalCharacters * (totalCharacters - 1.0));
+	index = (float)summation / (totalCharacters * (totalCharacters - 1.0f));
 	return index;
 }
 
@@ -264,7 +272,7 @@ float friedmanTest(std::string ciphertext) {
 
 	totalCharacters = ciphertext.length();
 	ioc = indexOfCoincidence(ciphertext);
-	keyLength = (0.027 * totalCharacters) / ((totalCharacters - 1.0) * ioc - (0.038 * totalCharacters) + 0.065);
+	keyLength = (0.027f * totalCharacters) / ((totalCharacters - 1.0f) * ioc - (0.038f * totalCharacters) + 0.065f);
 	return keyLength;
 }
 //==========================================
@@ -279,9 +287,9 @@ void displayFrequencies(float frequencies[]) {
 //==========================================
 float averageIOC(std::string ciphertext) {
 	std::vector<float> averages(50);
-	int keyLength;
 	int length = ciphertext.length();
 	std::string star;
+	float maxioc = 0;
 
 	std::cout << "==============================\n"
 		<< "Below is the average index of coincidences for key length 1 - 25.\n"
@@ -296,13 +304,15 @@ float averageIOC(std::string ciphertext) {
 			cosets[j % i] += ciphertext[j];
 		}
 		float sum = 0;
-		for (int z = 0; z < cosets.size(); z++) {
+		int cosetSize = cosets.size();
+		for (int z = 0; z < cosetSize; z++) {
 			sum += indexOfCoincidence(cosets[z]);
 		}
 		averages[i] = sum / (float)i;
 		if (averages[i] > 0.06)
 			star = '*';
 		else star = "";
+
 		std::cout << "keylength: " << i << " average ioc: " << averages[i] << " " << star << std::endl;
 	}
 	return 1;
@@ -398,9 +408,11 @@ std::string adjustKeyword(std::vector<std::map<int, char>>& freqMap, std::string
 		std::cin.ignore();
 
 		std::cout << "The most likely characters (listed from most likely to least likely) for the index you selected are as follows: \n";
+		std::cout << "(The numbers represent the summation of the product of the frequencies found in the text and the frequencies of english alphabet) \n";
+
 		int i = 0;
-		for (std::map<int, char>::iterator it = --freqMap[index].end(); it != freqMap[index].begin(); --it) {
-			std::cout << i << " => " << it->second << '\n';
+		for (std::map<int, char>::reverse_iterator it = freqMap[index].rbegin(); it != freqMap[index].rend(); ++it) {
+			std::cout << it->first << " => " << it->second << '\n';
 			i++;
 		}
 
